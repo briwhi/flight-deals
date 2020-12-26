@@ -17,5 +17,6 @@ class FlightSearch:
         response = requests.get(url=endpoint, params=params, headers=headers)
         data = response.json()
         iata = data["airports"][0]["iata"]
+        print("retrieved iata list")
         return iata
 
