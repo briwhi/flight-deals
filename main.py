@@ -1,22 +1,20 @@
-# This file will need to use the DataManager,FlightSearch, FlightData, NotificationManager classes to achieve the program requirements.
-
-import requests
-from pprint import pprint
-from flight_search import FlightSearch
-from data_manager import DataManager
 from datetime import datetime, timedelta
+from data_manager import DataManager
+from flight_search import FlightSearch
+from notification_manager import NotificationManager
 
-
-flight_search = FlightSearch()
 data_manager = DataManager()
+sheet_data = data_manager.get_destination_data()
+flight_search = FlightSearch()
+notification_manager = NotificationManager()
 
+ORIGIN_CITY_IATA = "LON"
 
-sheet_data = data_manager.get_sheety_data()
-if sheet_data["prices"][0]["iataCode"] == '':
-    for city in sheet_data["prices"]:
-        iata_code = flight_search.find_iata(city["city"])
-        row = city["id"]
-        data_manager.update_iata_on_sheet(row, iata_code)
+if sheet_data[0]["iataCode"] == "":
+    for row in sheet_data:
+        row["iataCode"] = flight_search.get_destination_code(row["city"])
+    data_manager.destination_data = sheet_data
+    data_manager.update_destination_codes()
 
 tomorrow = datetime.now() + timedelta(days=1)
 six_month_from_today = datetime.now() + timedelta(days=(6 * 30))
@@ -28,4 +26,7 @@ for destination in sheet_data:
         from_time=tomorrow,
         to_time=six_month_from_today
     )
-
+    if flight.price < destination["lowestPrice"]:
+        notification_manager.send_sms(
+            message=f"Low price alert! Only £{flight.price} to fly from {flight.origin_city}-{flight.origin_airport} to {flight.destination_city}-{flight.destination_airport}, from {flight.out_date} to {flight.return_date}."
+        )
